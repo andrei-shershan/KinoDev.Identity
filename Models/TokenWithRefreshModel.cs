@@ -2,12 +2,12 @@
 
 namespace KinoDev.Identity.Models
 {
-    public class SignInResponseModel
+    public class TokenWithRefreshModel : TokenModel
     {
-        [JsonProperty("access_token")]
-        public string Token { get; set; }
-
         [JsonProperty("expired_at")]
         public DateTime ExpiredAt { get; set; }
+
+        [JsonProperty("refresh_token")]
+        public string RefreshToken { get; set; }
     }
 }

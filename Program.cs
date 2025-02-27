@@ -1,9 +1,13 @@
 using KinoDev.Identity.Configurations;
+using KinoDev.Identity.Constants;
 using KinoDev.Identity.DbContexts;
 using KinoDev.Identity.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Protocols.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace KinoDev.Identity
 {
@@ -28,11 +32,16 @@ namespace KinoDev.Identity
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JWT"));
+            builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("AuthenticationSettings"));
 
-            var settings = builder.Configuration.GetSection("JWT").Get<JwtSettings>();
+            var settings = builder.Configuration.GetSection("AuthenticationSettings").Get<AuthenticationSettings>();
+            if (settings is null)
+            {
+                throw new InvalidConfigurationException("Cannot obtain AuthenticationSettings configuration");
+            }
 
-            Console.WriteLine($"SETTIGNS ARE: {JsonConvert.SerializeObject(settings) }");
+            // TODO: For development only, remove when go to live
+            Console.WriteLine($"SETTIGNS ARE: {JsonConvert.SerializeObject(settings)}");
 
             var connectionString = builder.Configuration.GetConnectionString("Identity");
             Console.WriteLine($"Connection string in Identity: {connectionString}");
@@ -53,8 +62,27 @@ namespace KinoDev.Identity
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = AuthenticationConstants.JwtBearer;
+                options.DefaultChallengeScheme = AuthenticationConstants.JwtBearer;
+            })
+            .AddJwtBearer(AuthenticationConstants.JwtBearer, options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = settings.Issuer,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Secret)),
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
             builder.Services.AddScoped<ITokenService, TokenService>();
-            builder.Services.AddTransient<ISignInService, SignInService>();
+            builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
 
             // TODO: It's for local dev only
             builder.Services.Configure<IdentityOptions>(options =>
