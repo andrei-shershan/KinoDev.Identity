@@ -19,7 +19,7 @@ namespace KinoDev.Identity.Services
 
         string GenerateRefreshToken();
 
-        string GenerateInternalAudienceToken(string clientId);
+        JwtSecurityToken GenerateInternalAudienceToken(string clientId);
     }
 
     public class TokenService : ITokenService
@@ -46,20 +46,18 @@ namespace KinoDev.Identity.Services
             );
         }
 
-        public string GenerateInternalAudienceToken(string clientId)
+        public JwtSecurityToken GenerateInternalAudienceToken(string clientId)
         {
             var claims = GetClaims(clientId);
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authenticationSettings.Secret));
-            var token = new JwtSecurityToken(
+            return new JwtSecurityToken(
                 issuer: _authenticationSettings.Issuer,
                 audience: _authenticationSettings.Audiences.Internal,
                 expires: DateTime.UtcNow.AddMinutes(_authenticationSettings.Expirations.ShortLivingExpirationInMin),
                 claims: claims,
                 signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         public JwtSecurityToken GenerateJwtToken(IdentityUser user, IEnumerable<string> roles)
