@@ -1,5 +1,6 @@
 ﻿using KinoDev.Identity.Configurations;
 using KinoDev.Identity.DbContexts;
+using KinoDev.Identity.DbModels;
 using KinoDev.Identity.Models;
 using KinoDev.Identity.ServiceErrors;
 using KinoDev.Shared.InfrastructureModels;
@@ -166,14 +167,15 @@ namespace KinoDev.Identity.Services
                 }
 
                 var token = _tokenService.GenerateInternalAudienceToken(clientCredentialsRequest.ClientId);
-                if (string.IsNullOrWhiteSpace(token))
+                if (token == null)
                 {
                     return OperationResult<TokenModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InternalError);
                 }
 
                 return OperationResult<TokenModel, AuthenticationServiceError>.Success(new TokenModel()
                 {
-                    AccessToken = token
+                    AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
+                    ExpiredAt = token.ValidTo
                 });
             }
             catch (Exception ex)
