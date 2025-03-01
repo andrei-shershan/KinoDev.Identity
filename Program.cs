@@ -32,9 +32,9 @@ namespace KinoDev.Identity
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("AuthenticationSettings"));
+            builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("Authentication"));
 
-            var settings = builder.Configuration.GetSection("AuthenticationSettings").Get<AuthenticationSettings>();
+            var settings = builder.Configuration.GetSection("Authentication").Get<AuthenticationSettings>();
             if (settings is null)
             {
                 throw new InvalidConfigurationException("Cannot obtain AuthenticationSettings configuration");
