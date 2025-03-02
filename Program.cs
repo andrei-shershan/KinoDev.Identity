@@ -37,14 +37,14 @@ namespace KinoDev.Identity
             var settings = builder.Configuration.GetSection("Authentication").Get<AuthenticationSettings>();
             if (settings is null)
             {
-                throw new InvalidConfigurationException("Cannot obtain AuthenticationSettings configuration");
+                throw new InvalidConfigurationException("Cannot obtain AuthenticationSettings from configuration");
             }
 
-            // TODO: For development only, remove when go to live
-            Console.WriteLine($"SETTIGNS ARE: {JsonConvert.SerializeObject(settings)}");
-
             var connectionString = builder.Configuration.GetConnectionString("Identity");
-            Console.WriteLine($"Connection string in Identity: {connectionString}");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidConfigurationException("Cannot obtain ConnectionString from configuration");
+            }
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             {
@@ -95,6 +95,8 @@ namespace KinoDev.Identity
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequiredUniqueChars = 1;
             });
+
+            builder.Services.AddHostedService<InitializerService>();
 
             var app = builder.Build();
 
