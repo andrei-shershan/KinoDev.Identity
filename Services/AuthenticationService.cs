@@ -25,12 +25,14 @@ namespace KinoDev.Identity.Services
     public class AuthenticationService : IAuthenticationService
     {
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly ITokenService _tokenService;
         private readonly AuthenticationSettings _authenticationSettings;
 
         public AuthenticationService(
             UserManager<IdentityUser> userManager,
+            RoleManager<IdentityRole> roleManager,
             ApplicationDbContext applicationDbContext,
             ITokenService tokenService,
             IOptions<AuthenticationSettings> options
@@ -38,6 +40,7 @@ namespace KinoDev.Identity.Services
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
+            _roleManager = roleManager;
             _tokenService = tokenService;
             _authenticationSettings = options.Value;
         }
@@ -103,7 +106,7 @@ namespace KinoDev.Identity.Services
                 if (user == null)
                 {
                     return OperationResult<bool, AuthenticationServiceError>.Failure(AuthenticationServiceError.InternalError);
-                }
+                }              
 
                 return OperationResult<bool, AuthenticationServiceError>.Success(true);
             }
