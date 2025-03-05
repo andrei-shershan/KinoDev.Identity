@@ -48,12 +48,18 @@ namespace KinoDev.Identity.Services
         }
 
         private async Task CreateUserAndAddToRole(
-            UserManager<IdentityUser> userManager, 
+            UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager,
             string email,
             string roleName
         )
         {
+            var user = await userManager.FindByEmailAsync(email);
+            if (user != null)
+            {
+                return;
+            }
+
             var newUser = new IdentityUser()
             {
                 UserName = email,

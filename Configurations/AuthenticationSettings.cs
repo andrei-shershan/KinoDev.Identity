@@ -13,6 +13,10 @@
         public Expiration Expirations { get; set; }
 
         public Audience Audiences { get; set; }
+
+        public string Domain { get; set; }
+    
+        public CORS CORS { get; set; }
     }
 
     public class Audience
@@ -27,5 +31,10 @@
         public int ShortLivingExpirationInMin { get; set; }
 
         public int LongLivingExpirationInMin { get; set; }
+    }
+
+    public class CORS
+    {
+        public string AllowedCredentialsOrigins { get; set; }
     }
 }

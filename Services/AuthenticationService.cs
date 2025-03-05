@@ -20,6 +20,10 @@ namespace KinoDev.Identity.Services
         OperationResult<TokenModel, AuthenticationServiceError> SignInAsync(ClientCredentials clientCredentialsRequest);
 
         Task<OperationResult<TokenWithRefreshModel, AuthenticationServiceError>> RefreshTokenAsync(string accessToken, string refreshToken);
+
+        Task<OperationResult<TokenModel, AuthenticationServiceError>> RefreshTokenAsync(string refreshToken);
+
+        Task ClearRefreshToken(string refreshToken);
     }
 
     public class AuthenticationService : IAuthenticationService
@@ -43,6 +47,21 @@ namespace KinoDev.Identity.Services
             _roleManager = roleManager;
             _tokenService = tokenService;
             _authenticationSettings = options.Value;
+        }
+
+        public async Task ClearRefreshToken(string refreshToken)
+        {
+            var storedRefreshToken = _applicationDbContext.RefreshTokens.FirstOrDefault(x => x.Token == refreshToken);
+            if (storedRefreshToken != null)
+            {
+                _applicationDbContext.RefreshTokens.Remove(storedRefreshToken);
+                await _applicationDbContext.SaveChangesAsync();                
+            }
+
+            else
+            {
+                //TODO: Log Error
+            }
         }
 
         public async Task<OperationResult<TokenWithRefreshModel, AuthenticationServiceError>> RefreshTokenAsync(string accessToken, string refreshToken)
@@ -84,6 +103,39 @@ namespace KinoDev.Identity.Services
             catch (Exception ex)
             {
                 return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InternalError, ex.Message);
+            }
+        }
+
+        public async Task<OperationResult<TokenModel, AuthenticationServiceError>> RefreshTokenAsync(string refreshToken)
+        {
+            try
+            {
+                var storedRefreshToken = _applicationDbContext.RefreshTokens.FirstOrDefault(x => x.Token == refreshToken);
+                if (storedRefreshToken == null)
+                {
+                    return OperationResult<TokenModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
+                }
+
+                if (storedRefreshToken.IsExpired)
+                {
+                    _applicationDbContext.RefreshTokens.Remove(storedRefreshToken);
+                    await _applicationDbContext.SaveChangesAsync();
+                    return OperationResult<TokenModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
+                }
+
+                var user = await _userManager.FindByIdAsync(storedRefreshToken.UserId);
+                var roles = await _userManager.GetRolesAsync(user);
+                var newAccessToken = _tokenService.GenerateJwtToken(user, roles);
+
+                return OperationResult<TokenModel, AuthenticationServiceError>.Success(new TokenModel()
+                {
+                    AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
+                    ExpiredAt = newAccessToken.ValidTo
+                });
+            }
+            catch (Exception ex)
+            {
+                return OperationResult<TokenModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InternalError, ex.Message);
             }
         }
 
@@ -132,7 +184,9 @@ namespace KinoDev.Identity.Services
                     return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
                 }
 
-                var accessToken = _tokenService.GenerateJwtToken(email, user.Id);
+                var roles = await _userManager.GetRolesAsync(user);
+
+                var accessToken = _tokenService.GenerateJwtToken(email, user.Id, roles);
                 var refreshToken = _tokenService.GenerateRefreshToken();
 
                 await _applicationDbContext.RefreshTokens.AddAsync(new DbModels.RefreshToken()
