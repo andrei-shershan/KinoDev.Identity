@@ -4,6 +4,8 @@
 name: .NET
 
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -18,8 +20,12 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    - name: Authenticate with GitHub Packages
+      run: echo "::add-mask::${{ secrets.GITHUB_TOKEN }}"
     - name: Restore dependencies
-      run: dotnet restore --source https://nuget.pkg.github.com/andrei-shershan/index.json
+      run: dotnet restore --source "https://nuget.pkg.github.com/andrei-shershan/index.json" --source "https://api.nuget.org/v3/index.json"
+      env:
+        NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Build
       run: dotnet build --no-restore
     - name: Test
