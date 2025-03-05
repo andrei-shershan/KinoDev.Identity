@@ -19,7 +19,9 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
-      run: dotnet restore --source https://nuget.pkg.github.com/andrei-shershan/index.json
+      run: dotnet restore --source https://api.nuget.org/v3/index.json --source https://nuget.pkg.github.com/andrei-shershan/index.json
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Build
       run: dotnet build --no-restore
     - name: Test
