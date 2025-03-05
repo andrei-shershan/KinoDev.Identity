@@ -19,7 +19,7 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: Restore dependencies
-      run: dotnet restore --source https://nuget.pkg.github.com/OWNER/index.json
+      run: dotnet restore --source https://nuget.pkg.github.com/andrei-shershan/index.json
     - name: Build
       run: dotnet build --no-restore
     - name: Test
