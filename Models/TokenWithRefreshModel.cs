@@ -4,7 +4,7 @@ namespace KinoDev.Identity.Models
 {
     public class TokenWithRefreshModel : TokenModel
     {
-        [JsonProperty("refresh_token")]
+        [JsonProperty(Constants.AuthenticationConstants.RefreshToken)]
         public string RefreshToken { get; set; }
     }
 }

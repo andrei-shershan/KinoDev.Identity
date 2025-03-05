@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace KinoDev.Identity.Controllers
@@ -7,6 +7,7 @@ namespace KinoDev.Identity.Controllers
     [ApiController]
     public class TestController : ControllerBase
     {
+        [AllowAnonymous]
         [HttpGet("hello")]
         public IActionResult Hello()
         {

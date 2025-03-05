@@ -34,8 +34,8 @@ namespace KinoDev.Identity
 
             builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("Authentication"));
 
-            var settings = builder.Configuration.GetSection("Authentication").Get<AuthenticationSettings>();
-            if (settings is null)
+            var authenticationSettings = builder.Configuration.GetSection("Authentication").Get<AuthenticationSettings>();
+            if (authenticationSettings is null)
             {
                 throw new InvalidConfigurationException("Cannot obtain AuthenticationSettings from configuration");
             }
@@ -75,8 +75,8 @@ namespace KinoDev.Identity
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = settings.Issuer,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Secret)),
+                    ValidIssuer = authenticationSettings.Issuer,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authenticationSettings.Secret)),
                     ClockSkew = TimeSpan.Zero
                 };
             });
@@ -96,6 +96,21 @@ namespace KinoDev.Identity
                 options.Password.RequiredUniqueChars = 1;
             });
 
+            builder.Services.AddCors(options =>
+            {
+                if (!string.IsNullOrWhiteSpace(authenticationSettings.CORS.AllowedCredentialsOrigins))
+                {
+                    options.AddPolicy(CorsConstants.AllowedCredentials, policy =>
+                    {
+                        policy
+                            .WithOrigins(authenticationSettings.CORS.AllowedCredentialsOrigins.Split(","))
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    });
+                }
+            });
+
             builder.Services.AddHostedService<InitializerService>();
 
             var app = builder.Build();
@@ -109,6 +124,8 @@ namespace KinoDev.Identity
 
             // TODO: Disable for localhost only
             // app.UseHttpsRedirection();
+
+            app.UseCors();
 
             app.UseAuthentication();
             app.UseAuthorization();

@@ -12,7 +12,7 @@ namespace KinoDev.Identity.Services
 {
     public interface ITokenService
     {
-        JwtSecurityToken GenerateJwtToken(string email, string userId);
+        JwtSecurityToken GenerateJwtToken(string email, string userId, IEnumerable<string> roles = null);
 
         JwtSecurityToken GenerateJwtToken(IdentityUser user, IEnumerable<string> roles);
 
@@ -32,9 +32,14 @@ namespace KinoDev.Identity.Services
             _authenticationSettings = authenticationSettigns.Value;
         }
 
-        public JwtSecurityToken GenerateJwtToken(string email, string userId)
+        public JwtSecurityToken GenerateJwtToken(string email, string userId, IEnumerable<string> roles = null)
         {
             var authClaims = GetClaims(userId, email);
+
+            if (roles != null)
+            {
+                authClaims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+            }
 
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authenticationSettings.Secret));
 
@@ -60,7 +65,6 @@ namespace KinoDev.Identity.Services
                 signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
         }
-
         public JwtSecurityToken GenerateJwtToken(IdentityUser user, IEnumerable<string> roles)
         {
             var authClaims = GetClaims(user.Id, user.Email);
@@ -97,7 +101,7 @@ namespace KinoDev.Identity.Services
 
         public string GenerateRefreshToken()
         {
-            return Guid.NewGuid().ToString().Replace("-", "");
+            return Guid.NewGuid().ToString();
         }
 
         private List<Claim> GetClaims(string userId, string email)
