@@ -18,8 +18,24 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+
+    # Configure NuGet sources including GitHub Packages
+    - name: Configure NuGet Sources
+      run: |
+        dotnet nuget add source "https://nuget.pkg.github.com/andrei-shershan/index.json" -n github
+      
+    # Add GitHub Packages authentication
+    - name: Authenticate GitHub Packages
+      run: |
+        dotnet nuget update source github \
+          --username andreis-shershan \
+          --password ${{ secrets.kinodev-shared-token-read }} \
+          --store-password-in-clear-text
+          
+    # Restore dependencies
     - name: Restore dependencies
-      run: dotnet restore --source https://nuget.pkg.github.com/andrei-shershan/index.json
+      run: dotnet restore
+    
     - name: Build
       run: dotnet build --no-restore
     - name: Test
