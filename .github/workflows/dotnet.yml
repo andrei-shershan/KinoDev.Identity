@@ -18,6 +18,10 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    - name: Authenticate to GitHub Packages
+      run: echo "//nuget.pkg.github.com/andrei-shershan/index.json" > ~/.nuget/NuGet/NuGet.Config
+      env:
+        GITHUB_TOKEN: ${{ secrets.kinodev-shared-token-read }}
     - name: Restore dependencies
       run: dotnet restore --source https://nuget.pkg.github.com/andrei-shershan/index.json
     - name: Build
