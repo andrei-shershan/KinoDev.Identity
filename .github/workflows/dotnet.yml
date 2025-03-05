@@ -18,8 +18,16 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+
+    - name: Add GitHub Packages source
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/andrei-shershan/index.json \
+          --name github \
+          --username andrei-shershan \
+          --password ${{ secrets.READ_PACKAGE_KEY }} \
+          --store-password-in-clear-text
     - name: Restore dependencies
-      run: dotnet restore --source https://nuget.pkg.github.com/andrei-shershan/index.json
+      run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
     - name: Test
