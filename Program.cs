@@ -2,11 +2,11 @@ using KinoDev.Identity.Configurations;
 using KinoDev.Identity.Constants;
 using KinoDev.Identity.DbContexts;
 using KinoDev.Identity.Services;
+using KinoDev.Identity.Services.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 using System.Text;
 
 namespace KinoDev.Identity
@@ -17,22 +17,10 @@ namespace KinoDev.Identity
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            // Add services to the container.
             builder.Configuration
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                //.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
-
-            builder.Services.AddControllers()
-                .AddNewtonsoftJson();
-
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-
-            builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("Authentication"));
 
             var authenticationSettings = builder.Configuration.GetSection("Authentication").Get<AuthenticationSettings>();
             if (authenticationSettings is null)
@@ -46,15 +34,18 @@ namespace KinoDev.Identity
                 throw new InvalidConfigurationException("Cannot obtain ConnectionString from configuration");
             }
 
+            builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("Authentication"));
+            builder.Services.Configure<UserInitialisingSettings>(builder.Configuration.GetSection("UserInitialising"));
+
+            builder.Services.AddControllers()
+                .AddNewtonsoftJson();
+
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseMySql(
                     connectionString,
                     ServerVersion.AutoDetect(connectionString)
-                )
-                // TODO: Allow it for local development only
-                .EnableSensitiveDataLogging()
-                .LogTo(Console.WriteLine, LogLevel.Information);
+                );
             });
 
             // Identity
@@ -113,17 +104,21 @@ namespace KinoDev.Identity
 
             builder.Services.AddHostedService<InitializerService>();
 
+            builder.Services.AddHealthChecks();
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
 
-            // TODO: Disable for localhost only
-            // app.UseHttpsRedirection();
+            var disableHttpsRedirection = builder.Configuration.GetValue<bool>("DisableHttpsRedirection");
+            if (!disableHttpsRedirection)
+            {
+                app.UseHttpsRedirection();
+            }
 
             app.UseCors();
 

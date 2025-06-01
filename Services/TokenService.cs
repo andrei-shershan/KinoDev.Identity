@@ -1,5 +1,6 @@
 ﻿using KinoDev.Identity.Configurations;
 using KinoDev.Identity.Constants;
+using KinoDev.Identity.Services.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -10,19 +11,6 @@ using System.Text;
 
 namespace KinoDev.Identity.Services
 {
-    public interface ITokenService
-    {
-        JwtSecurityToken GenerateJwtToken(string email, string userId, IEnumerable<string> roles = null);
-
-        JwtSecurityToken GenerateJwtToken(IdentityUser user, IEnumerable<string> roles);
-
-        ClaimsPrincipal GetPrincipalFromExpiredToken(string token);
-
-        string GenerateRefreshToken();
-
-        JwtSecurityToken GenerateInternalAudienceToken(string clientId);
-    }
-
     public class TokenService : ITokenService
     {
         private readonly AuthenticationSettings _authenticationSettings;
@@ -32,7 +20,7 @@ namespace KinoDev.Identity.Services
             _authenticationSettings = authenticationSettigns.Value;
         }
 
-        public JwtSecurityToken GenerateJwtToken(string email, string userId, IEnumerable<string> roles = null)
+        public JwtSecurityToken GenerateJwtToken(string email, string userId, IEnumerable<string>? roles = null)
         {
             var authClaims = GetClaims(userId, email);
 

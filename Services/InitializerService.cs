@@ -1,6 +1,7 @@
-﻿using KinoDev.Identity.Constants;
+﻿using KinoDev.Identity.Configurations;
 using KinoDev.Shared.Constants;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using System.Reflection;
 
 namespace KinoDev.Identity.Services
@@ -9,9 +10,15 @@ namespace KinoDev.Identity.Services
     {
         private readonly IServiceProvider _serviceProvider;
 
-        public InitializerService(IServiceProvider serviceProvider)
+        private readonly UserInitialisingSettings _userInitialisingSettings;
+
+        public InitializerService(
+            IServiceProvider serviceProvider,
+            IOptions<UserInitialisingSettings> options
+            )
         {
             _serviceProvider = serviceProvider;
+            _userInitialisingSettings = options.Value;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -23,7 +30,8 @@ namespace KinoDev.Identity.Services
                 var roles = typeof(Roles)
                     .GetFields(BindingFlags.Public | BindingFlags.Static)
                     .Where(field => field.IsLiteral && !field.IsInitOnly)
-                    .Select(field => field.GetRawConstantValue().ToString());
+                    .Select(field => field.GetRawConstantValue()?.ToString())
+                    .Where(role => !string.IsNullOrWhiteSpace(role));
 
                 foreach (var role in roles)
                 {
@@ -37,20 +45,36 @@ namespace KinoDev.Identity.Services
 
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-                // TODO: Move to env / settings
-                // It's for localhost only!
-                await CreateUserAndAddToRole(userManager, roleManager, "admin@kinodev.com", Roles.Admin);
+                if (!string.IsNullOrWhiteSpace(_userInitialisingSettings.AdminEmail) &&
+                   !string.IsNullOrWhiteSpace(_userInitialisingSettings.AdminPassword))
+                {
 
-                await CreateUserAndAddToRole(userManager, roleManager, "manager@kinodev.com", Roles.Manager);
+                    await CreateUserAndAddToRole(
+                            userManager,
+                            _userInitialisingSettings.AdminEmail,
+                            _userInitialisingSettings.AdminPassword,
+                            Roles.Admin
+                        );
+                }
 
-                await CreateUserAndAddToRole(userManager, roleManager, "cashier@kinodev.com", Roles.Cashier);
+                if (!string.IsNullOrWhiteSpace(_userInitialisingSettings.ManagerEmail) &&
+                   !string.IsNullOrWhiteSpace(_userInitialisingSettings.ManagerPassword))
+                {
+
+                    await CreateUserAndAddToRole(
+                        userManager,
+                        _userInitialisingSettings.ManagerEmail,
+                        _userInitialisingSettings.ManagerPassword,
+                        Roles.Manager
+                    );
+                }
             }
         }
 
         private async Task CreateUserAndAddToRole(
             UserManager<IdentityUser> userManager,
-            RoleManager<IdentityRole> roleManager,
             string email,
+            string password,
             string roleName
         )
         {
@@ -66,9 +90,7 @@ namespace KinoDev.Identity.Services
                 Email = email
             };
 
-            // TODO: For local testing all passwords the same, move to env / settings
-            await userManager.CreateAsync(newUser, "Test123!");
-
+            await userManager.CreateAsync(newUser, password);
             await userManager.AddToRoleAsync(newUser, roleName);
         }
 
