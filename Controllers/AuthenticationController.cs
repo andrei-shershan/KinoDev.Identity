@@ -1,7 +1,7 @@
 ﻿using KinoDev.Identity.Configurations;
 using KinoDev.Identity.Constants;
 using KinoDev.Identity.Models;
-using KinoDev.Identity.Services;
+using KinoDev.Identity.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +45,7 @@ namespace KinoDev.Identity.Controllers
             if (result.IsSuccess)
             {
                 Response.Cookies.Append(
-                    Constants.AuthenticationConstants.RefreshToken,
+                    AuthenticationConstants.RefreshToken,
                     result.Result.RefreshToken,
                     new CookieOptions()
                     {
@@ -56,22 +56,25 @@ namespace KinoDev.Identity.Controllers
                         Path = "/"
                     });
 
+                var xsrf = Guid.NewGuid().ToString();
+
                 Response.Cookies.Append(
-                    Constants.AuthenticationConstants.XsrfToken,
-                    Guid.NewGuid().ToString(),
+                    AuthenticationConstants.XsrfToken,
+                    xsrf,
                     new CookieOptions()
                     {
-                        HttpOnly = false,
+                        HttpOnly = true,
                         Secure = true,
                         SameSite = SameSiteMode.None,
                         Domain = _authenticationSettings.Domain,
                         Path = "/"
                     });
 
-                return Ok(new TokenModel()
+                return Ok(new TokenModelXsrf()
                 {
                     AccessToken = result.Result.AccessToken,
-                    ExpiredAt = result.Result.ExpiredAt
+                    ExpiredAt = result.Result.ExpiredAt,
+                    XsrfToken = xsrf
                 });
             }
 
@@ -82,11 +85,9 @@ namespace KinoDev.Identity.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh()
         {
-            var csrfTokenFromHeader = Request.Headers[Constants.AuthenticationConstants.XCsrfToken].FirstOrDefault();
-            var csrfTokenFromCookie = Request.Cookies[Constants.AuthenticationConstants.XsrfToken];
-            var refreshToken = Request.Cookies[Constants.AuthenticationConstants.RefreshToken];
-
-            Console.WriteLine($"{csrfTokenFromHeader}, {csrfTokenFromCookie}, {refreshToken}");
+            var csrfTokenFromHeader = Request.Headers[AuthenticationConstants.XCsrfToken].FirstOrDefault();
+            var csrfTokenFromCookie = Request.Cookies[AuthenticationConstants.XsrfToken];
+            var refreshToken = Request.Cookies[AuthenticationConstants.RefreshToken];
 
             if (string.IsNullOrWhiteSpace(csrfTokenFromCookie)
                 || string.IsNullOrWhiteSpace(csrfTokenFromHeader)

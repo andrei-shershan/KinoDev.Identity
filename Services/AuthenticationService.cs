@@ -3,6 +3,7 @@ using KinoDev.Identity.DbContexts;
 using KinoDev.Identity.DbModels;
 using KinoDev.Identity.Models;
 using KinoDev.Identity.ServiceErrors;
+using KinoDev.Identity.Services.Abstractions;
 using KinoDev.Shared.InfrastructureModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -11,32 +12,15 @@ using System.Security.Claims;
 
 namespace KinoDev.Identity.Services
 {
-    public interface IAuthenticationService
-    {
-        Task<OperationResult<bool, AuthenticationServiceError>> RegisterAsync(string email, string password);
-
-        Task<OperationResult<TokenWithRefreshModel, AuthenticationServiceError>> SignInAsync(string email, string password);
-
-        OperationResult<TokenModel, AuthenticationServiceError> SignInAsync(ClientCredentials clientCredentialsRequest);
-
-        Task<OperationResult<TokenWithRefreshModel, AuthenticationServiceError>> RefreshTokenAsync(string accessToken, string refreshToken);
-
-        Task<OperationResult<TokenModel, AuthenticationServiceError>> RefreshTokenAsync(string refreshToken);
-
-        Task ClearRefreshToken(string refreshToken);
-    }
-
     public class AuthenticationService : IAuthenticationService
     {
         private readonly UserManager<IdentityUser> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly ITokenService _tokenService;
         private readonly AuthenticationSettings _authenticationSettings;
 
         public AuthenticationService(
             UserManager<IdentityUser> userManager,
-            RoleManager<IdentityRole> roleManager,
             ApplicationDbContext applicationDbContext,
             ITokenService tokenService,
             IOptions<AuthenticationSettings> options
@@ -44,7 +28,6 @@ namespace KinoDev.Identity.Services
         {
             _applicationDbContext = applicationDbContext;
             _userManager = userManager;
-            _roleManager = roleManager;
             _tokenService = tokenService;
             _authenticationSettings = options.Value;
         }
@@ -56,53 +39,6 @@ namespace KinoDev.Identity.Services
             {
                 _applicationDbContext.RefreshTokens.Remove(storedRefreshToken);
                 await _applicationDbContext.SaveChangesAsync();                
-            }
-
-            else
-            {
-                //TODO: Log Error
-            }
-        }
-
-        public async Task<OperationResult<TokenWithRefreshModel, AuthenticationServiceError>> RefreshTokenAsync(string accessToken, string refreshToken)
-        {
-            try
-            {
-                var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
-                if (principal == null)
-                {
-                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
-                }
-
-                var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                var storedRefreshToken = _applicationDbContext.RefreshTokens.FirstOrDefault(x => x.Token == refreshToken && x.UserId == userId);
-                if (storedRefreshToken == null)
-                {
-                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
-                }
-
-                if (storedRefreshToken.IsExpired)
-                {
-                    _applicationDbContext.RefreshTokens.Remove(storedRefreshToken);
-                    await _applicationDbContext.SaveChangesAsync();
-                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
-                }
-
-                var user = await _userManager.FindByIdAsync(userId);
-                var roles = await _userManager.GetRolesAsync(user);
-                var newAccessToken = _tokenService.GenerateJwtToken(user, roles);
-
-                return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Success(new TokenWithRefreshModel()
-                {
-                    AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
-                    RefreshToken = storedRefreshToken.Token,
-                    ExpiredAt = newAccessToken.ValidTo
-                });
-            }
-            catch (Exception ex)
-            {
-                return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InternalError, ex.Message);
             }
         }
 
