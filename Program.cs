@@ -28,25 +28,44 @@ namespace KinoDev.Identity
                 throw new InvalidConfigurationException("Cannot obtain AuthenticationSettings from configuration");
             }
 
-            var connectionString = builder.Configuration.GetConnectionString("Identity");
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new InvalidConfigurationException("Cannot obtain ConnectionString from configuration");
-            }
-
             builder.Services.Configure<AuthenticationSettings>(builder.Configuration.GetSection("Authentication"));
             builder.Services.Configure<UserInitialisingSettings>(builder.Configuration.GetSection("UserInitialising"));
 
             builder.Services.AddControllers()
                 .AddNewtonsoftJson();
 
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            // Configure database based on settings
+            var inMemoryDbSettings = builder.Configuration.GetSection("InMemoryDb").Get<InMemoryDbSettings>();
+            if( inMemoryDbSettings is null)
             {
-                options.UseMySql(
-                    connectionString,
-                    ServerVersion.AutoDetect(connectionString)
-                );
-            });
+                throw new InvalidConfigurationException("Cannot obtain InMemoryDbSettings from configuration");
+            }
+           
+            if (inMemoryDbSettings.Enabled)
+            {
+                // Use InMemory database
+                builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                {
+                    options.UseInMemoryDatabase(inMemoryDbSettings.DatabaseName);
+                });
+            }
+            else
+            {
+                // Use MySQL database
+                var connectionString = builder.Configuration.GetConnectionString("Identity");
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    throw new InvalidConfigurationException("Cannot obtain ConnectionString from configuration");
+                }
+                
+                builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                {
+                    options.UseMySql(
+                        connectionString,
+                        ServerVersion.AutoDetect(connectionString)
+                    );
+                });
+            }
 
             // Identity
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
@@ -125,7 +144,8 @@ namespace KinoDev.Identity
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.MapControllers();
+            app.MapControllers();           
+
 
             app.Run();
         }
