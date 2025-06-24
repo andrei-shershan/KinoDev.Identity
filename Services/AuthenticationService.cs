@@ -111,13 +111,17 @@ namespace KinoDev.Identity.Services
                 var user = await _userManager.FindByEmailAsync(email);
                 if (user == null || string.IsNullOrWhiteSpace(user.Email))
                 {
-                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
+                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(
+                        AuthenticationServiceError.InvalidData,
+                        "User not found or email is empty");
                 }
 
                 var passwordCheckResult = await _userManager.CheckPasswordAsync(user, password);
                 if (!passwordCheckResult)
                 {
-                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(AuthenticationServiceError.InvalidData);
+                    return OperationResult<TokenWithRefreshModel, AuthenticationServiceError>.Failure(
+                        AuthenticationServiceError.InvalidData,
+                        "Invalid password");
                 }
 
                 var roles = await _userManager.GetRolesAsync(user);

@@ -78,7 +78,7 @@ namespace KinoDev.Identity.Controllers
                 });
             }
 
-            return BadRequest();
+            return BadRequest($"{result.ErrorCode.ToString()} - {result.ErrorMessage}");
         }
 
         [AllowAnonymous]
