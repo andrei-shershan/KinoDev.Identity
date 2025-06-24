@@ -15,5 +15,7 @@ namespace KinoDev.Identity.Services.Abstractions
         Task<OperationResult<TokenModel, AuthenticationServiceError>> RefreshTokenAsync(string refreshToken);
 
         Task ClearRefreshToken(string refreshToken);
+
+        Task<string> GetData();
     }
 }

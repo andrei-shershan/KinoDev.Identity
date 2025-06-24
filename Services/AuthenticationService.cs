@@ -6,6 +6,7 @@ using KinoDev.Identity.ServiceErrors;
 using KinoDev.Identity.Services.Abstractions;
 using KinoDev.Shared.InfrastructureModels;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -38,8 +39,17 @@ namespace KinoDev.Identity.Services
             if (storedRefreshToken != null)
             {
                 _applicationDbContext.RefreshTokens.Remove(storedRefreshToken);
-                await _applicationDbContext.SaveChangesAsync();                
+                await _applicationDbContext.SaveChangesAsync();
             }
+        }
+
+        public async Task<string> GetData()
+        {
+            var data = await _applicationDbContext.Users
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+
+            return data ?? "No data found";
         }
 
         public async Task<OperationResult<TokenModel, AuthenticationServiceError>> RefreshTokenAsync(string refreshToken)
@@ -94,7 +104,7 @@ namespace KinoDev.Identity.Services
                 if (user == null)
                 {
                     return OperationResult<bool, AuthenticationServiceError>.Failure(AuthenticationServiceError.InternalError);
-                }              
+                }
 
                 return OperationResult<bool, AuthenticationServiceError>.Success(true);
             }

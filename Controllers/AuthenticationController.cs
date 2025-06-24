@@ -15,6 +15,7 @@ namespace KinoDev.Identity.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authenticationService;
+
         private readonly AuthenticationSettings _authenticationSettings;
 
         public AuthenticationController(IAuthenticationService authenticationService, IOptions<AuthenticationSettings> options)
@@ -34,6 +35,15 @@ namespace KinoDev.Identity.Controllers
             }
 
             return BadRequest();
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> Get()
+        {
+            var result = await _authenticationService.GetData();
+
+            return Ok(result);
         }
 
         [AllowAnonymous]
